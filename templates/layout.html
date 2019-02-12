@@ -1,0 +1,105 @@
+<!doctype html>
+<title>LDAP People Directory</title>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/bootstrap.min.slate.css') }}">
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='css/people.css') }}">
+<script src="{{ url_for('static', filename='js/jquery-3.3.1.min.js') }}"></script>
+<script src="https://apis.google.com/js/platform.js" async defer></script>
+<meta name="google-signin-client_id" content="914400276985-qagt8q3osfqfrbv51l7pjokm38rc8cus.apps.googleusercontent.com">
+<link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}">
+<script>
+    $(document).ready(function () {
+        $(".search").keyup(function () {
+            var searchTerm = $(".search").val();
+            var listItem = $('.results tbody').children('tr');
+            var searchSplit = searchTerm.replace(/ /g, "'):containsi('")
+
+            $.extend($.expr[':'], {
+                'containsi': function (elem, i, match, array) {
+                    return (elem.textContent || elem.innerText || '').toLowerCase().indexOf((match[3] || "").toLowerCase()) >= 0;
+                }
+            });
+
+            $(".results tbody tr").not(":containsi('" + searchSplit + "')").each(function (e) {
+                $(this).attr('visible', 'false');
+            });
+
+            $(".results tbody tr:containsi('" + searchSplit + "')").each(function (e) {
+                $(this).attr('visible', 'true');
+            });
+
+            var jobCount = $('.results tbody tr[visible="true"]').length;
+            if (jobCount > 1)
+                $('.counter').text(jobCount + ' items');
+            else
+                $('.counter').text(jobCount + ' item');
+
+            if (jobCount == '0') { $('.no-result').show(); }
+            else { $('.no-result').hide(); }
+        });
+    });
+
+    function onSignIn(googleUser) {
+        var id_token = googleUser.getAuthResponse().id_token;
+        var profile = googleUser.getBasicProfile();
+        $("#edit-profile").show();
+
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', "{{ url_for('authenticate_with_google_token') }}");
+        xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        xhr.onload = function () {
+            console.log('Signed in as: ' + xhr.responseText);
+        };
+        xhr.send('idtoken=' + id_token);
+    }
+</script>
+
+<div class=page>
+    <div class="navbar navbar-default" style="max-width: 1150px; margin: auto; margin-top: 20px;">
+        <div class=" navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-responsive-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="#">People</a>
+        </div>
+        <div class="navbar-collapse collapse navbar-responsive-collapse">
+            <ul class="nav navbar-nav">
+                <li class="{{ 'active' if request.path == '/' else '' }}">
+                    <a href="{{ url_for('index') }}">Phone List</a>
+                </li>
+                {% if idinfo is defined %}
+                <li class="{{ 'active' if request.path == '/profile' else '' }}">
+                    <a href="{{ url_for('profile') }}">Edit Profile</a>
+                </li>
+                {% endif %}
+            </ul>
+            <ul class="nav navbar-nav navbar-right">
+                {% if users is defined %}
+                <li>
+                    <form class="navbar-form navbar-left">
+                        <input type="text" class="form-control col-lg-8 search" placeholder="Search">
+                    </form>
+                </li>
+                {% endif %}
+                <li>
+                    {% if idinfo is defined %}
+                    <div class="">
+                        <a href="https://profiles.google.com/me">
+                            <img class="img-circle float-right avatar" src="{{ idinfo.picture }}">
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="g-signin2" data-onsuccess="onSignIn" style="margin: 7px 7px;"></div>
+                    {% endif %}
+                </li>
+            </ul>
+        </div>
+    </div>
+    <div class=container>
+        <div>&nbsp;</div>
+        <div class="jumbotron">
+            {% block body %}{% endblock %}
+        </div>
+    </div>
+</div>

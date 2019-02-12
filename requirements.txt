@@ -1,0 +1,4 @@
+Flask
+google-auth
+google-oauth
+ldap3
